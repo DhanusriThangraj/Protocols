@@ -110,13 +110,22 @@ always @(posedge clk or posedge reset) begin
 	 else
 		 error<=0;
                  next_state<= rx_stop;
-
             end
             rx_stop: begin
                 error <= (out_tx[10] != 1);
-		next_state <= idle;
             end
         endcase
     end
 end
 
+always @(*) begin
+    case (state)
+        idle:      next_state = (out_tx[0] == 0) ? rx_data : idle;
+        rx_data:   next_state = (rx_count == 8) ? rx_parity : rx_data;
+        rx_parity: next_state = rx_stop;
+        rx_stop:   next_state = idle;
+        default:   next_state = idle;
+    endcase
+end
+
+endmodule
