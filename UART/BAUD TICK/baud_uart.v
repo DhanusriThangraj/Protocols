@@ -12,19 +12,19 @@ reg [31:0]count_rx=0;
 always @(*) begin
  case (baud_sel)
 	 2'b00:begin
-	  baud_partition_tx=31250;
+	  baud_partition_tx=31250;//4800 baudrate
 	  baud_partition_rx=31250;end
           
 	  2'b01:begin
-		  baud_partition_tx=7813;
+		  baud_partition_tx=7813;//19200
 		  baud_partition_rx=7813; end
 
 		  2'b10:begin
-			  baud_partition_tx=325;
+			  baud_partition_tx=325;//490800
 			  baud_partition_rx=325; end
 
 			  2'b11:begin 
- 			  baud_partition_tx=162;
+ 			  baud_partition_tx=162;//921600
 			  baud_partition_rx=162;end
 
 endcase
@@ -52,7 +52,7 @@ if (reset) begin
         inrx<=0;
        	count_rx<=0;
 end
-else if(count_rx == baud_partition_tx) begin
+	else if(count_rx == baud_partition_rx) begin
                 inrx<=1'b1;
 	 	count_rx <=0;
 
