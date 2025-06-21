@@ -52,7 +52,7 @@ if (reset) begin
         inrx<=0;
        	count_rx<=0;
 end
-else if(count_rx == baud_partition_tx) begin
+	else if(count_rx == baud_partition_rx) begin
                 inrx<=1'b1;
 	 	count_rx <=0;
 
