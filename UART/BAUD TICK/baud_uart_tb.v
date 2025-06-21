@@ -35,10 +35,10 @@ module baud_generator_tb;
 
       baud_sel = 2'b01;//4800
     // #500000 baud_sel = 2'b10;//19200
-     #500000 baud_sel = 2'b11;//460800
-      #500000 baud_sel = 2'b01;//4800
-     #500000 baud_sel = 2'b10;//19200
-     #500000 baud_sel = 2'b11;//460800
+     #500000 baud_sel = 2'b10;//460800
+      #500000 baud_sel = 2'b00;//4800
+     #500000 baud_sel = 2'b01;//19200
+     #500000 baud_sel = 2'b11;//921600
 
      
      #500000 $finish;
