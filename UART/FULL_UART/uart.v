@@ -47,8 +47,6 @@ end
 
 endmodule
 
-
-
 module transmitter (
     input clk,
     input reset,
