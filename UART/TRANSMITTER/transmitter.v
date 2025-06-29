@@ -7,8 +7,7 @@ reg [31:0]baud_partition_tx = 0;
 reg [31:0]baud_partition_rx = 0;
 reg [31:0]count_tx=0;
 reg [31:0]count_rx=0;
-
-
+	
 always @(*) begin
  case (baud_sel)
 	 2'b00:begin
