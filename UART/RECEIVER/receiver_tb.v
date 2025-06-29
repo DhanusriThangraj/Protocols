@@ -10,7 +10,7 @@ module receiver_tb;
     wire [7:0] out_rx;
    
     always #5 clk = ~clk;
-
+    
     // Instantiate Baud Generator
     baud_generator bg (
         .clk(clk),
