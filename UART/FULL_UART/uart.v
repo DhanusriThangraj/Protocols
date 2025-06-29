@@ -18,7 +18,7 @@ always @(*) begin
         2'b11: begin baud_partition_tx = 162;   baud_partition_rx = 162;   end
     endcase
 end
-
+	
 always @ (posedge clk or posedge reset) begin
     if (reset) begin
         intx <= 0;
