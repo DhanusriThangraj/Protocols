@@ -44,8 +44,8 @@ always @ (posedge clk or posedge reset) begin
         count_rx <= count_rx + 1;
     end
 end
-
 endmodule
+
 
 module transmitter (
     input clk,
