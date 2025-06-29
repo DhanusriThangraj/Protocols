@@ -10,8 +10,7 @@ module uart_tb;
     wire intx, inrx;
     wire [10:0] out_tx;
     wire [7:0] out_rx;
-
-    // Clock generation: 150 MHz
+  // Clock generation: 150 MHz
     always #5 clk = ~clk;
 
     // Instantiate baud generator
