@@ -1,4 +1,156 @@
-module baud_generator(
+module baud_generator #(parameter frequency_tx = 50000000, frequency_rx = 40000000)(
+    input clk_1,
+    input clk_2,
+    input reset,
+    input [1:0] baud_sel,
+    output reg intx,
+    output reg inrx
+);
+
+reg [31:0] baud_partition_tx;
+reg [31:0] baud_partition_rx;
+reg [31:0] count_tx;
+reg [31:0] count_rx;
+
+always @(posedge clk_1 or posedge reset) begin
+    if (reset) begin
+        count_tx <= 0;
+        intx <= 0;
+    end else begin
+        case (baud_sel)
+            2'b00: baud_partition_tx = frequency_tx / 4800;
+            2'b01: baud_partition_tx = frequency_tx / 9600;
+            2'b10: baud_partition_tx = frequency_tx / 19200;
+            2'b11: baud_partition_tx = frequency_tx / 38400;
+        endcase
+
+        if (count_tx >= baud_partition_tx) begin
+            intx <= 1'b1;
+            count_tx <= 0;
+        end else begin
+            intx <= 1'b0;
+            count_tx <= count_tx + 1;
+        end
+    end
+end
+
+always @(posedge clk_2 or posedge reset) begin
+    if (reset) begin
+        count_rx <= 0;
+        inrx <= 0;
+    end else begin
+        case (baud_sel)
+            2'b00: baud_partition_rx = frequency_rx / 4800;
+            2'b01: baud_partition_rx = frequency_rx / 9600;
+            2'b10: baud_partition_rx = frequency_rx / 19200;
+            2'b11: baud_partition_rx = frequency_rx / 38400;
+        endcase
+
+        if (count_rx >= baud_partition_rx) begin
+            inrx <= 1'b1;
+            count_rx <= 0;
+        end else begin
+            inrx <= 1'b0;
+            count_rx <= count_rx + 1;
+        end
+    end
+end
+
+endmodule
+
+module transmitter (
+    input clk_1,
+    input reset,
+    input [7:0] data_in,
+    input intx,
+    output reg tx_line
+);
+
+reg [3:0] count;
+reg [10:0] shift_reg;
+reg [2:0] state;
+
+parameter IDLE = 3'd0, LOAD = 3'd1, SEND = 3'd2;
+
+always @(posedge clk_1 or posedge reset) begin
+    if (reset) begin
+        state <= IDLE;
+        count <= 0;
+        tx_line <= 1'b1;
+    end else begin
+        case (state)
+            IDLE: begin
+                if (intx) begin
+                    shift_reg[0] <= 0; // Start
+                    shift_reg[8:1] <= data_in; // Data
+                    shift_reg[9] <= ^data_in; // Odd Parity
+                    shift_reg[10] <= 1'b1; // Stop
+                    count <= 0;
+                    state <= SEND;
+                end
+            end
+
+            SEND: begin
+                if (intx) begin
+                    tx_line <= shift_reg[count];
+                    count <= count + 1;
+                    if (count == 10)
+                        state <= IDLE;
+                end
+            end
+        endcase
+    end
+end
+
+endmodule
+module receiver (
+    input clk_2,
+    input reset,
+    input rx_line,
+    input inrx,
+    output reg [7:0] out_rx,
+    output reg error
+);
+
+reg [3:0] count;
+reg [2:0] state;
+reg [7:0] temp_rx;
+reg parity_bit;
+
+parameter IDLE = 3'd0, START = 3'd1, DATA = 3'd2, PARITY = 3'd3, STOP = 3'd4;
+
+always @(posedge clk_2 or posedge reset) begin
+    if (reset) begin
+        state <= IDLE;
+        count <= 0;
+        out_rx <= 0;
+        error <= 0;
+    end else if (inrx) begin
+        case (state)
+            IDLE: begin
+                if (rx_line == 0) begin
+                    count <= 0;
+                    state <= DATA;
+                end
+            end
+
+            DATA: begin
+                temp_rx[count] <= rx_line;
+                count <= count + 1;
+                if (count == 7)
+                    state <= PARITY;
+            end
+
+            PARITY: begin
+                parity_bit <= rx_line;
+                if (parity_bit !== (^temp_rx))
+                    error <= 1;
+                else
+                    error <= 0;
+                state <= STOP;
+            end
+
+            STOP: beginmodule baud_generator(
     input clk, reset,
     input [1:0] baud_sel,
     output reg intx,
@@ -34,149 +186,16 @@ end
 
 always @ (posedge clk or posedge reset) begin
     if (reset) begin
-        inrx <= 0;
-        count_rx <= 0;
-    end else if (count_rx == baud_partition_rx - 1) begin
-        inrx <= 1;
-        count_rx <= 0;
-    end else begin
-        inrx <= 0;
-        count_rx <= count_rx + 1;
-    end
-end
-endmodule
 
-
-module transmitter (
-    input clk,
-    input reset,
-    input [7:0] data_in,
-    input intx,
-    output reg [10:0] out_tx
-);
-
-reg [3:0] count;
-reg [1:0] parity_sel = 2'b01; // Odd parity
-reg parity;
-reg [2:0] next_state, state;
-reg [7:0] data_reg;
-
-parameter idle = 3'd0;
-parameter tx_start = 3'd1;
-parameter tx_data = 3'd2;
-parameter tx_parity = 3'd3;
-parameter tx_stop = 3'd4;
-
-always @(posedge clk or posedge reset) begin
-    if (reset) begin
-        state <= idle;
-        out_tx <= 11'b11111111111;
-        count <= 0;
-        data_reg <= 0;
-    end else if (intx) begin
-        state <= next_state;
-
-        case (state)
-            idle: begin
-                out_tx <= {10'b1111111111, 1'b0};
-                data_reg <= data_in;
-                count <= 0;
-            end
-            tx_start: begin
-                out_tx <= {out_tx[9:0], data_reg[0]};
-                data_reg <= data_reg >> 1;
-                count <= count + 1;
-            end
-            tx_parity: begin
-                case (parity_sel)
-                    2'b00: parity = 1'b0;
-                    2'b10: parity = ~(^data_in);
-                    2'b01: parity = ^data_in;
-                    default: parity = 1'b0;
-                endcase
-                out_tx <= {out_tx[9:0], parity};
-            end
-            tx_stop: begin
-                out_tx <= {out_tx[9:0], 1'b1};
+                if (rx_line == 1) begin
+                    out_rx <= temp_rx;
+                end else begin
+                    error <= 1;
+                end
+                state <= IDLE;
             end
         endcase
     end
-end
-
-always @(*) begin
-    case (state)
-        idle:      next_state = tx_start;
-        tx_start:  next_state = (count == 8) ? tx_parity : tx_start;
-        tx_parity: next_state = tx_stop;
-        tx_stop:   next_state = idle;
-        default:   next_state = idle;
-    endcase
-end
-
-endmodule
-
-module receiver(
-    input clk,
-    input reset,
-    input [10:0] out_tx,
-    input inrx,
-    output reg [7:0] out_rx
-);
-
-reg [3:0] count;
-reg [3:0] rx_count;
-reg error;
-reg [1:0] next_state, state;
-
-parameter idle      = 2'b00;
-parameter rx_data   = 2'b01;
-parameter rx_parity = 2'b10;
-parameter rx_stop   = 2'b11;
-
-always @(posedge clk or posedge reset) begin
-    if (reset) begin
-        count <= 0;
-        rx_count <= 0;
-        out_rx <= 0;
-        state <= idle;
-    end else if (inrx) begin
-        state <= next_state;
-
-        case (state)
-            idle: begin
-                if (out_tx[0] == 0) begin
-                    count <= 0;
-                    rx_count <= 0;
-                end
-            end
-            rx_data: begin
-                if (rx_count < 8) begin
-                    out_rx[rx_count] <= out_tx[rx_count + 1];
-                    rx_count <= rx_count + 1;
-                end
-            end
-            rx_parity: begin
-                 if(out_tx[9]!==(^out_rx))
-		 error<=1;
-	 else
-		 error<=0;
-                 next_state<= rx_stop;
-            end
-            rx_stop: begin
-                error <= (out_tx[10] != 1);
-            end
-        endcase
-    end
-end
-
-always @(*) begin
-    case (state)
-        idle:      next_state = (out_tx[0] == 0) ? rx_data : idle;
-        rx_data:   next_state = (rx_count == 8) ? rx_parity : rx_data;
-        rx_parity: next_state = rx_stop;
-        rx_stop:   next_state = idle;
-        default:   next_state = idle;
-    endcase
 end
 
 endmodule
