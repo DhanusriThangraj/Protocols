@@ -1,56 +1,63 @@
-
 `timescale 1ns/1ps
 
 module uart_tb;
 
-    reg clk = 0;
-    reg reset = 0;
+    reg clk_1 = 0;
+    reg clk_2 = 0;
+    reg reset;
     reg [1:0] baud_sel;
     reg [7:0] data;
     wire intx, inrx;
-    wire [10:0] out_tx;
+    wire tx_line;
     wire [7:0] out_rx;
-  // Clock generation: 150 MHz
-    always #5 clk = ~clk;
+    wire error;
 
-    // Instantiate baud generator
+    always #10 clk_1 = ~clk_1;     // 50 MHz
+    always #12.5 clk_2 = ~clk_2;   // 40 MHz
+
     baud_generator bg (
-        .clk(clk),
+        .clk_1(clk_1), .clk_2(clk_2),
         .reset(reset),
         .baud_sel(baud_sel),
         .intx(intx),
         .inrx(inrx)
     );
 
-    // Instantiate transmitter
     transmitter tx (
-        .clk(clk),
+        .clk_1(clk_1),
         .reset(reset),
         .data_in(data),
         .intx(intx),
-        .out_tx(out_tx)
+        .tx_line(tx_line)
     );
 
-    // Instantiate receiver
     receiver rx (
-        .clk(clk),
+        .clk_2(clk_2),
         .reset(reset),
-        .out_tx(out_tx),
+        .rx_line(tx_line),
         .inrx(inrx),
-        .out_rx(out_rx)
+        .out_rx(out_rx),
+        .error(error)
     );
 
     initial begin
-        $dumpfile("uart_wave.vcd");
+        $dumpfile("UART_WAVE.vcd");
         $dumpvars(0, uart_tb);
-    end
 
-    initial begin
-        reset = 1; baud_sel = 2'b10; // 460800 baud
-        #20 reset = 0;
+        reset = 1;
+        baud_sel = 2'b11; // 19200
+        data = 8'b1111_1010;
+        #100;
+        reset = 0;
 
-        data = 8'b10101010;
-        #100000 $finish;
+        #10000000;
+
+        $display("Transmitted Data: %b", data);
+        $display("Received Data   : %b", out_rx);
+        $display("Parity Error    : %b", error);
+
+        #100000;
+        $finish;
     end
 
 endmodule
