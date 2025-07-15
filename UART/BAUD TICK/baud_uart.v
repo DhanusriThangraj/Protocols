@@ -1,67 +1,62 @@
-module baud_generator(input clk,reset,
-input [1:0]baud_sel,
-output reg intx,
-output reg inrx);
-//frequency=150 mhz
-reg [31:0]baud_partition_tx = 0;
-reg [31:0]baud_partition_rx = 0;
-reg [31:0]count_tx=0;
-reg [31:0]count_rx=0;
+module baud_generator #(parameter frequency_tx = 50000000, frequency_rx = 40000000)(
+    input clk_1,
+    input clk_2,
+    input reset,
+    input [1:0] baud_sel,
+    output reg intx,
+    output reg inrx
+);
 
-always @(*) begin
- case (baud_sel)
-	 2'b00:begin
-	  baud_partition_tx=31250;//4800 baudrate
-	  baud_partition_rx=31250;end
-          
-	  2'b01:begin
-		  baud_partition_tx=7813;//19200
-		  baud_partition_rx=7813; end
+reg [31:0] baud_partition_tx;
+reg [31:0] baud_partition_rx;
+reg [31:0] count_tx;
+reg [31:0] count_rx;
 
-		  2'b10:begin
-			  baud_partition_tx=325;//490800
-			  baud_partition_rx=325; end
+always @(posedge clk_1 or posedge reset) begin
+    if (reset) begin
+        count_tx <= 0;
+        intx <= 0;
+    end else begin
+        case (baud_sel)
+            2'b00: baud_partition_tx = frequency_tx / 4800;
+            2'b01: baud_partition_tx = frequency_tx / 9600;
+            2'b10: baud_partition_tx = frequency_tx / 19200;
+            2'b11: baud_partition_tx = frequency_tx / 38400;
+        endcase
 
-			  2'b11:begin 
- 			  baud_partition_tx=162;//921600
-			  baud_partition_rx=162;end
-
-endcase
+        if (count_tx >= baud_partition_tx) begin
+            intx <= 1'b1;
+            count_tx <= 0;
+        end else begin
+            intx <= 1'b0;
+            count_tx <= count_tx + 1;
+        end
+    end
 end
 
+always @(posedge clk_2 or posedge reset) begin
+    if (reset) begin
+        count_rx <= 0;
+        inrx <= 0;
+    end else begin
+        case (baud_sel)
+            2'b00: baud_partition_rx = frequency_rx / 4800;
+            2'b01: baud_partition_rx = frequency_rx / 9600;
+            2'b10: baud_partition_rx = frequency_rx / 19200;
+            2'b11: baud_partition_rx = frequency_rx / 38400;
+        endcase
 
-always @ (posedge clk or posedge reset) begin
-
-if (reset) begin
- intx<=0;
- count_tx<=0;
+        if (count_rx >= baud_partition_rx) begin
+            inrx <= 1'b1;
+            count_rx <= 0;
+        end else begin
+            inrx <= 1'b0;
+            count_rx <= count_rx + 1;
+        end
+    end
 end
-else if (count_tx == baud_partition_tx) begin
-	intx<=1'b1;
-	count_tx<=0;
-	end
-	else begin
-		intx<=0;
-		count_tx<=count_tx+1'b1;
-		end end
 
-always @ (posedge clk or posedge reset) begin
-
-if (reset) begin
-        inrx<=0;
-       	count_rx<=0;
-end
-	else if(count_rx == baud_partition_rx) begin
-                inrx<=1'b1;
-	 	count_rx <=0;
-
-	end
-	else begin
-		inrx<=0;
-		count_rx<=count_rx+1'b1;end
-	end
-
-	endmodule
+endmodule
 
 
 
