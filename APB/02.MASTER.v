@@ -27,9 +27,9 @@ module Master #(parameter DATA = 32, ADDR = 32)(
 
     always @(*) begin
         case(state)
-          IDLE   : next_state = (transfer) ? SETUP : IDLE;
+            IDLE   : next_state = (transfer) ? SETUP : IDLE;
             SETUP  : next_state = ACCESS;
-            ACCESS : next_state = (pready) ? IDLE : ACCESS;
+            ACCESS : next_state = (pready&&!transfer)?IDLE:ACCESS;
             default: next_state = IDLE;
         endcase
     end
@@ -43,14 +43,14 @@ module Master #(parameter DATA = 32, ADDR = 32)(
 
   
     always @(*) begin
-        paddr   = 0;
-        pwdata  = 0;
-        pwrite  = 0;
-        psel    = 0;
-        penable = 0;
-
+      
         case(state)
-            IDLE  : begin end
+            IDLE  : begin 
+                paddr   = 0;
+                pwdata  = 0;
+                pwrite  = 0;
+                psel    = 0;
+                penable = 0;    end
             SETUP : begin
                 psel    = 1;
                 penable = 0;
