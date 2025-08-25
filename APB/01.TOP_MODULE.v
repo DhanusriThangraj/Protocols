@@ -11,8 +11,7 @@ module Top #(parameter DATA = 32, ADDR = 32)(
     input  wire [DATA-1:0]  data_in,
     output wire [DATA-1:0]  prdata
 );
-
-  
+ 
     wire [ADDR-1:0] paddr;
     wire            pwrite;
     wire [DATA-1:0] pwdata;
