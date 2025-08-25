@@ -3,7 +3,6 @@ module Master #(parameter DATA = 32, ADDR = 32)(
     input  wire             presetn,
     input  wire             pready,    // from slave
     input  wire [DATA-1:0]  prdata,    // from slave
-
     
     input  wire             transfer,
     input  wire             rw,        // 1=write, 0=read
