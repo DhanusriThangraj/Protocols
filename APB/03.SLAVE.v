@@ -11,6 +11,7 @@ module Slave #(parameter DATA = 32, ADDR =32)(
     output reg             pready
 );
 
+    
     reg [DATA-1:0] mem [0:255];
 
   always @(posedge pclk or negedge presetn) begin
