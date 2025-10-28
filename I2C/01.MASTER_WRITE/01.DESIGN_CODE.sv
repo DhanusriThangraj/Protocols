@@ -3,6 +3,7 @@ module i2c_master(
   input clk,
   input reset,
   input [6:0]addr,
+  input [7:0]reg_addr,
   input [7:0]data,
   input go,
   inout sda,
@@ -15,8 +16,9 @@ module i2c_master(
   reg sda_out;
   reg sda_en;
   reg [3:0] state, next_state;
-
-  reg [7:0] addr_buf;
+  reg [7:0]reg_buf;
+  reg [7:0]addr_buf;
+  reg [7:0]data_buf;
 
   
   
@@ -66,21 +68,21 @@ module i2c_master(
       
       start:next_state=slave_address;
       
-      slave_address: if(add_count==8)
+      slave_address: if(add_count==7)
                           next_state=ack_1;
                       else
                         next_state=slave_address;
       
       ack_1: next_state=(sda==0)?reg_address:stop;
       
-      reg_address: if(add_count==8)
+      reg_address: if(add_count==7)
                       next_state=ack_2;
                    else
                      next_state=reg_address;
       
       ack_2: next_state=(sda==0)?data_phase:stop;      
       
-      data_phase: if(add_count==8)
+      data_phase: if(add_count==7)
                           next_state=ack_3;
                       else
                         next_state=data_phase;
@@ -114,9 +116,11 @@ module i2c_master(
         end
 
         start: begin
-          sda_en <= 1;
-          sda_out <= 0;  // start condition: SDA goes low while SCL high
-          addr_buf <= {addr, 1'b0};  // LSB=0 (write)
+          sda_en   <= 1;
+          sda_out  <= 0;  // START: SDA low while SCL high
+          addr_buf <= {addr, 1'b0};  // Write mode
+          reg_buf  <= reg_addr;
+          data_buf <= data;
           add_count <= 0;
           
         end
@@ -134,7 +138,7 @@ module i2c_master(
 
         reg_address: begin
           sda_en <= 1;
-          sda_out <=  data[7 - add_count] ;
+          sda_out <=  reg_buf[7 - add_count] ;
           add_count <= add_count + 1;
         end
 
@@ -145,17 +149,19 @@ module i2c_master(
 
         data_phase: begin
           sda_en <= 1;
-          sda_out <= data[7 - add_count];
+          sda_out <= data_buf[7 - add_count];
           add_count <= add_count + 1;
         end
 
         ack_3: begin
           sda_en <= 0;
+          add_count <= 0;
+          
         end
 
         stop: begin
           sda_en <= 1;
-         sda_out <= 1;  // stop condition
+          sda_out <= 1;  // stop condition
         end
 
       endcase
